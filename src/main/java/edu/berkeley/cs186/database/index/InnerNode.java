@@ -9,6 +9,7 @@ import edu.berkeley.cs186.database.memory.BufferManager;
 import edu.berkeley.cs186.database.memory.Page;
 import edu.berkeley.cs186.database.table.RecordId;
 
+import javax.xml.crypto.Data;
 import java.nio.ByteBuffer;
 import java.util.*;
 
@@ -52,7 +53,7 @@ class InnerNode extends BPlusNode {
     InnerNode(BPlusTreeMetadata metadata, BufferManager bufferManager, List<DataBox> keys,
               List<Long> children, LockContext treeContext) {
         this(metadata, bufferManager, bufferManager.fetchNewPage(treeContext, metadata.getPartNum()),
-             keys, children, treeContext);
+                keys, children, treeContext);
     }
 
     /**
@@ -80,8 +81,10 @@ class InnerNode extends BPlusNode {
     // See BPlusNode.get.
     @Override
     public LeafNode get(DataBox key) {
-        // TODO(proj2): implement
-
+        // TODO(proj2):
+        BPlusNode node = this.searchChild(key);
+        if (node != null)
+            return node.get(key);
         return null;
     }
 
@@ -90,8 +93,8 @@ class InnerNode extends BPlusNode {
     public LeafNode getLeftmostLeaf() {
         assert(children.size() > 0);
         // TODO(proj2): implement
-
-        return null;
+        BPlusNode node = getChild(0);
+        return node.getLeftmostLeaf();
     }
 
     // See BPlusNode.put.
@@ -99,15 +102,74 @@ class InnerNode extends BPlusNode {
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
 
+        BPlusNode node = searchChild(key);
+        Optional<Pair<DataBox, Long>> split = node.put(key, rid);
+        if (split.isPresent()) {
+            DataBox splitKey = split.get().getFirst();
+            int n = keys.size();
+            for (int i = 0; i < n + 1; i++) {
+                boolean greaterThanLeft;
+                boolean smallerEqualThanRight;
+                if (i == 0) {
+                    greaterThanLeft = true;
+                    smallerEqualThanRight = n == 0 || splitKey.compareTo(keys.get(0)) < 0;
+                } else if (i == n) {
+                    greaterThanLeft = splitKey.compareTo(keys.get(n - 1)) > 0;
+                    smallerEqualThanRight = true;
+                } else {
+                    greaterThanLeft = splitKey.compareTo(keys.get(i-1)) > 0;
+                    smallerEqualThanRight = splitKey.compareTo(keys.get(i)) < 0;
+                }
+                if (greaterThanLeft && smallerEqualThanRight) {
+                    keys.add(i, splitKey);
+                    children.add(i + 1, split.get().getSecond());
+                    int d = metadata.getOrder();
+                    if (keys.size() > 2 * d) {
+                        assert keys.size() == 2 * d + 1;
+                        List<DataBox> splitKeys = keys.subList(d + 1, 2 * d + 1);
+                        List<Long> splitChildren = children.subList(d + 1, 2 * d + 2);
+                        DataBox upKey = keys.get(d);
+                        keys = keys.subList(0, d);
+                        children = children.subList(0, d + 1);
+                        InnerNode newInner = new InnerNode(metadata, bufferManager, splitKeys, splitChildren, treeContext);
+                        sync();
+                        return Optional.of(new Pair<>(upKey, newInner.getPage().getPageNum()));
+                    }
+                    sync();
+                    return Optional.empty();
+                }
+            }
+            throw new BPlusTreeException("");
+        }
         return Optional.empty();
     }
 
     // See BPlusNode.bulkLoad.
     @Override
     public Optional<Pair<DataBox, Long>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
-            float fillFactor) {
+                                                  float fillFactor) {
         // TODO(proj2): implement
+        while (data.hasNext()) {
+            int d = metadata.getOrder();
+            BPlusNode node = getChild(children.size() - 1);
+            Optional<Pair<DataBox, Long>> pair = node.bulkLoad(data, fillFactor);
+            if (pair.isPresent()) {
+                keys.add(pair.get().getFirst());
+                children.add(pair.get().getSecond());
+            }
+            if (keys.size() > 2 * d) {
+                List<DataBox> splitKeys = keys.subList(d + 1, 2 * d + 1);
+                List<Long> splitChildren = children.subList(d + 1, 2 * d + 2);
+                DataBox upKey = keys.get(d);
+                keys = keys.subList(0, d);
+                children = children.subList(0, d + 1);
+                InnerNode newInner = new InnerNode(metadata, bufferManager, splitKeys, splitChildren, treeContext);
+                sync();
+                return Optional.of(new Pair<>(upKey, newInner.getPage().getPageNum()));
+            }
+            sync();
 
+        }
         return Optional.empty();
     }
 
@@ -116,6 +178,9 @@ class InnerNode extends BPlusNode {
     public void remove(DataBox key) {
         // TODO(proj2): implement
 
+        BPlusNode node = this.searchChild(key);
+        if (node != null)
+            node.remove(key);
         return;
     }
 
@@ -286,7 +351,7 @@ class InnerNode extends BPlusNode {
             long childPageNum = child.getPage().getPageNum();
             lines.add(child.toDot());
             lines.add(String.format("  \"node%d\":f%d -> \"node%d\";",
-                                    pageNum, i, childPageNum));
+                    pageNum, i, childPageNum));
         }
 
         return String.join("\n", lines);
@@ -305,7 +370,7 @@ class InnerNode extends BPlusNode {
         //   d. the n+1 children pointers.
         //
         // For example, the following bytes:
-        //
+        //  1 byte 8 bit following example 0x
         //   +----+-------------+----+-------------------------+-------------------------+
         //   | 00 | 00 00 00 01 | 01 | 00 00 00 00 00 00 00 03 | 00 00 00 00 00 00 00 07 |
         //   +----+-------------+----+-------------------------+-------------------------+
@@ -370,12 +435,34 @@ class InnerNode extends BPlusNode {
         }
         InnerNode n = (InnerNode) o;
         return page.getPageNum() == n.page.getPageNum() &&
-               keys.equals(n.keys) &&
-               children.equals(n.children);
+                keys.equals(n.keys) &&
+                children.equals(n.children);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(page.getPageNum(), keys, children);
+    }
+
+    public BPlusNode searchChild(DataBox key) {
+        int n = this.keys.size();
+        for (int i = 0; i < n + 1; i++) {
+            boolean greaterThanLeft;
+            boolean smallerEqualThanRight;
+            if (i == 0) {
+                greaterThanLeft = true;
+                smallerEqualThanRight = key.compareTo(keys.get(0)) < 0;
+            } else if (i == n) {
+                greaterThanLeft = key.compareTo(keys.get(n - 1)) >= 0;
+                smallerEqualThanRight = true;
+            } else {
+                greaterThanLeft = key.compareTo(keys.get(i-1)) >= 0;
+                smallerEqualThanRight = key.compareTo(keys.get(i)) < 0;
+            }
+            if (greaterThanLeft && smallerEqualThanRight) {
+                return getChild(i);
+            }
+        }
+        return null;
     }
 }
