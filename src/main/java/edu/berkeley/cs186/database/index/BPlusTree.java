@@ -145,8 +145,6 @@ public class BPlusTree {
         // TODO(proj4_integration): Update the following line
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
-        // TODO(proj2): implement
-
         LeafNode leaf = root.get(key);
         return leaf.getKey(key);
     }
@@ -202,7 +200,6 @@ public class BPlusTree {
         // TODO(proj4_integration): Update the following line
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
-        // TODO(proj2): Return a BPlusTreeIterator.
         return new BPlusTreeIterator(root.getLeftmostLeaf());
     }
 
@@ -234,7 +231,6 @@ public class BPlusTree {
         // TODO(proj4_integration): Update the following line
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
-        // TODO(proj2): Return a BPlusTreeIterator.
         return new BPlusTreeIterator(root.getLeftmostLeaf(), key);
     }
 
@@ -252,7 +248,6 @@ public class BPlusTree {
         // TODO(proj4_integration): Update the following line
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
-        // TODO(proj2): implement
         // Note: You should NOT update the root variable directly.
         // Use the provided updateRoot() helper method to change
         // the tree's root if the old root splits.
@@ -294,7 +289,6 @@ public class BPlusTree {
         // TODO(proj4_integration): Update the following line
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
-        // TODO(proj2): implement
         if (scanAll().hasNext())
             throw new BPlusTreeException("NoEmptyTree");
         while (data.hasNext()) {
@@ -333,9 +327,6 @@ public class BPlusTree {
         typecheck(key);
         // TODO(proj4_integration): Update the following line
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
-
-        // TODO(proj2): implement
-
         root.remove(key);
         return;
     }
@@ -449,8 +440,6 @@ public class BPlusTree {
 
     // Iterator ////////////////////////////////////////////////////////////////
     private class BPlusTreeIterator implements Iterator<RecordId> {
-        // TODO(proj2): Add whatever fields and constructors you want here.
-
         Iterator<RecordId> iterator;
         LeafNode node;
         DataBox key;
@@ -467,7 +456,6 @@ public class BPlusTree {
         }
         @Override
         public boolean hasNext() {
-            // TODO(proj2): implement
             while (!iterator.hasNext()) {
                 if (node.getRightSibling().isPresent()) {
                     node = node.getRightSibling().get();
