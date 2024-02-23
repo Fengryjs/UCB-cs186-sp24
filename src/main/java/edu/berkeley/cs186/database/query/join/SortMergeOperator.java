@@ -139,12 +139,10 @@ public class SortMergeOperator extends JoinOperator {
          * or null if there are no more records to join.
          */
         private Record fetchNextRecord() {
-            if (leftRecord == null) {
-                // The left source was empty, nothing to fetch
-                return null;
-            }
             while (true) {
-                if (compare(leftRecord, rightRecord) == 0) {
+                if (leftRecord == null) {
+                    return null;
+                } else if (compare(leftRecord, rightRecord) == 0) {
                     if (!marked) {
                         rightIterator.markPrev();
                         marked = true;
@@ -177,7 +175,10 @@ public class SortMergeOperator extends JoinOperator {
             marked = false;
             rightIterator.reset();
             rightRecord = rightIterator.next();
-            leftRecord = leftIterator.next();
+            if (leftIterator.hasNext())
+                leftRecord = leftIterator.next();
+            else
+                leftRecord = null;
         }
         @Override
         public void remove() {
