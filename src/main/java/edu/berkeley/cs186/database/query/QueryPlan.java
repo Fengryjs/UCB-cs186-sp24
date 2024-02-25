@@ -574,30 +574,21 @@ public class QueryPlan {
      * minimum cost operator can be broken arbitrarily.
      */
     public QueryOperator minCostSingleAccess(String table) {
-        QueryOperator scanOperator = new SequentialScanOperator(this.transaction, table);
-        QueryOperator minOp = scanOperator;
+        QueryOperator minOp = new SequentialScanOperator(this.transaction, table);
+        int index = -1;
         // TODO(proj3_part2): implement
-        int minIOCost = scanOperator.estimateIOCost();
+        int minIOCost = minOp.estimateIOCost();
         List<Integer> indexColumns = getEligibleIndexColumns(table);
-        for (Integer index : indexColumns) {
-            SelectPredicate selectPredicate = this.selectPredicates.get(index);
+        for (Integer i : indexColumns) {
+            SelectPredicate selectPredicate = this.selectPredicates.get(indexColumns.get(i));
             IndexScanOperator indexScanOperator = new IndexScanOperator(transaction, table, selectPredicate.column, selectPredicate.operator, selectPredicate.value);
-            if (indexScanOperator.estimateIOCost() <= minIOCost) {
+            if (indexScanOperator.estimateIOCost() < minIOCost) {
                 minOp = indexScanOperator;
                 minIOCost = minOp.estimateIOCost();
+                index = indexColumns.get(i);
             }
         }
-        for (int i = 0; i < selectPredicates.size(); i++) {
-            SelectPredicate selectPredicate = this.selectPredicates.get(i);
-            if (!indexColumns.contains(i)) {
-                SelectOperator selectOperator = new SelectOperator(minOp, selectPredicate.column, selectPredicate.operator, selectPredicate.value);
-                if (selectOperator.estimateIOCost() <= minIOCost) {
-                    minOp = selectOperator;
-                    minIOCost = minOp.estimateIOCost();
-                }
-            }
-        }
-        return minOp;
+        return addEligibleSelections(minOp, index);
     }
 
     // Task 6: Join Selection //////////////////////////////////////////////////
@@ -722,19 +713,39 @@ public class QueryPlan {
      */
     public Iterator<Record> execute() {
         this.transaction.setAliasMap(this.aliases);
-        // TODO(proj3_part2): implement
         // Pass 1: For each table, find the lowest cost QueryOperator to access
         // the table. Construct a mapping of each table name to its lowest cost
         // operator.
-        //
-        // Pass i: On each pass, use the results from the previous pass to find
-        // the lowest cost joins with each table from pass 1. Repeat until all
-        // tables have been joined.
-        //
+        if (tableNames.size() == 1) {
+            finalOperator = minCostSingleAccess(tableNames.get(0));
+        } else {
+            // Pass i: On each pass, use the results from the previous pass to find
+            // the lowest cost joins with each table from pass 1. Repeat until all
+            // tables have been joined.
+            Map<Set<String>, QueryOperator> pass1Map = new HashMap<>();
+            for (String table : this.tableNames) {
+                QueryOperator minOp = minCostSingleAccess(table);
+                pass1Map.put(Collections.singleton(table), minOp);
+            }
+            Map<Set<String>, QueryOperator> passIMap = minCostJoins(pass1Map, pass1Map);
+            Set<String> finalKey = new HashSet<>(tableNames);
+            while (true) {
+                if (passIMap.containsKey(finalKey)) {
+                    finalOperator = minCostOperator(passIMap);
+                    break;
+                }
+                passIMap = minCostJoins(passIMap, pass1Map);
+            }
+        }
         // Set the final operator to the lowest cost operator from the last
         // pass, add group by, project, sort and limit operators, and return an
         // iterator over the final operator.
-        return this.executeNaive(); // TODO(proj3_part2): Replace this!
+        this.addGroupBy();
+        this.addProject();
+        this.addSort();
+        this.addLimit();
+        return finalOperator.iterator();
+        // return finalOperator.iterator();
     }
 
     // EXECUTE NAIVE ///////////////////////////////////////////////////////////
