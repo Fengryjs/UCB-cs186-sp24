@@ -576,7 +576,6 @@ public class QueryPlan {
     public QueryOperator minCostSingleAccess(String table) {
         QueryOperator minOp = new SequentialScanOperator(this.transaction, table);
         int index = -1;
-        // TODO(proj3_part2): implement
         int minIOCost = minOp.estimateIOCost();
         List<Integer> indexColumns = getEligibleIndexColumns(table);
         for (Integer i : indexColumns) {
@@ -641,7 +640,6 @@ public class QueryPlan {
             Map<Set<String>, QueryOperator> prevMap,
             Map<Set<String>, QueryOperator> pass1Map) {
         Map<Set<String>, QueryOperator> result = new HashMap<>();
-        // TODO(proj3_part2): implement
         // We provide a basic description of the logic you have to implement:
         // For each set of tables in prevMap
         for (Set<String> tables : prevMap.keySet())
