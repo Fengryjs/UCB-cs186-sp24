@@ -1,5 +1,9 @@
 package edu.berkeley.cs186.database.concurrency;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Utility methods to track the relationships between different lock types.
  */
@@ -21,9 +25,17 @@ public enum LockType {
         if (a == null || b == null) {
             throw new NullPointerException("null lock type");
         }
-        // TODO(proj4_part1): implement
-
-        return false;
+        List<LockType> typeEnum = Arrays.asList(S, X, IS, IX, SIX, NL);
+        boolean[][] matrix = new boolean[][]{
+             //  S      X      IS     IX     SIX    NL
+                {true , false, true , false, false, true}, // S
+                {false, false, false, false, false, true}, // X
+                {true , false, true , true , true , true}, // IS
+                {false, false, true , true , true , true}, // IX
+                {false, false, true , true , true , true}, // SIX
+                {true , true , true , true , true , true}, // NL
+        };
+        return matrix[typeEnum.indexOf(a)][typeEnum.indexOf(b)];
     }
 
     /**
@@ -53,9 +65,12 @@ public enum LockType {
         if (parentLockType == null || childLockType == null) {
             throw new NullPointerException("null lock type");
         }
-        // TODO(proj4_part1): implement
-
-        return false;
+        boolean result = false;
+        if (childLockType == NL || parentLockType == IX)
+            result = true;
+        else if (parentLock(parentLockType) == parentLock(childLockType))
+            result = parentLockType.isIntent();
+        return result;
     }
 
     /**
@@ -68,9 +83,18 @@ public enum LockType {
         if (required == null || substitute == null) {
             throw new NullPointerException("null lock type");
         }
-        // TODO(proj4_part1): implement
-
-        return false;
+        boolean result = false;
+        List<LockType> typeEnum = Arrays.asList(S, X, IS, IX, SIX, NL);
+        boolean[][] matrix = new boolean[][]{
+                //  S      X      IS     IX     SIX    NL
+                {true , false, true , false, false, true}, // S
+                {true , true, false, false, false, true}, // X
+                {false, false, true , false, false, true}, // IS
+                {false, false, true , true , false, true}, // IX
+                {true, false, true , true , true , true}, // SIX
+                {false, false, false, false, false, true}, // NL
+        };
+        return matrix[typeEnum.indexOf(substitute)][typeEnum.indexOf(required)];
     }
 
     /**
