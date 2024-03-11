@@ -93,7 +93,6 @@ public class LockContext {
     public void acquire(TransactionContext transaction, LockType lockType)
             throws InvalidLockException, DuplicateLockRequestException {
         // TODO(proj4_part2): implement
-
         this.checkReadOnly();
         if (lockType == LockType.NL || (this.parent != null && !LockType.canBeParentLock(this.parent.getExplicitLockType(transaction), lockType))) {
             throw new InvalidLockException("");
@@ -102,9 +101,14 @@ public class LockContext {
             Integer childNum = this.parent.numChildLocks.getOrDefault(transaction.getTransNum(), 0);
             this.parent.numChildLocks.put(transaction.getTransNum(), childNum + 1);
         }
-        lockman.acquire(transaction, this.getResourceName(), lockType);
-        System.out.println("Parent Lock Context " + this.parent + " acquire Lock " + lockType + " for transaction " + transaction);
-
+        if (getExplicitLockType(transaction) == LockType.NL)
+            lockman.acquire(transaction, this.getResourceName(), lockType);
+        else {
+            List<ResourceName> resourceNames = new ArrayList<>();
+            resourceNames.add(name);
+            resourceNames.addAll(sisDescendants(transaction));
+            lockman.acquireAndRelease(transaction, getResourceName(), lockType, resourceNames);
+        }
         return;
     }
 
@@ -123,7 +127,6 @@ public class LockContext {
             throws NoLockHeldException, InvalidLockException {
         // TODO(proj4_part2): implement
         this.checkReadOnly();
-        System.out.println("release " + transaction + " on " + name);
         List<ResourceName> descendants = this.sisDescendants(transaction);
         if (!descendants.isEmpty())
             throw new InvalidLockException("");
@@ -158,7 +161,15 @@ public class LockContext {
             throws DuplicateLockRequestException, NoLockHeldException, InvalidLockException {
         // TODO(proj4_part2): implement
         this.checkReadOnly();
-        this.lockman.promote(transaction, name, newLockType);
+        if (getExplicitLockType(transaction) == LockType.SIX && (newLockType == LockType.IS || newLockType == LockType.IX)) {
+            this.lockman.promote(transaction, name, newLockType);
+            for (ResourceName resourceName : sisDescendants(transaction))
+                lockman.release(transaction, resourceName);
+        } else {
+            this.lockman.promote(transaction, name, newLockType);
+        }
+
+
         return;
     }
 
