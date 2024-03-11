@@ -92,7 +92,6 @@ public class LockContext {
      */
     public void acquire(TransactionContext transaction, LockType lockType)
             throws InvalidLockException, DuplicateLockRequestException {
-        // TODO(proj4_part2): implement
         this.checkReadOnly();
         if (lockType == LockType.NL || (this.parent != null && !LockType.canBeParentLock(this.parent.getExplicitLockType(transaction), lockType))) {
             throw new InvalidLockException("");
@@ -125,7 +124,6 @@ public class LockContext {
      */
     public void release(TransactionContext transaction)
             throws NoLockHeldException, InvalidLockException {
-        // TODO(proj4_part2): implement
         this.checkReadOnly();
         List<ResourceName> descendants = this.sisDescendants(transaction);
         if (!descendants.isEmpty())
@@ -158,7 +156,6 @@ public class LockContext {
      */
     public void promote(TransactionContext transaction, LockType newLockType)
             throws DuplicateLockRequestException, NoLockHeldException, InvalidLockException {
-        // TODO(proj4_part2): implement
         this.checkReadOnly();
         if (getExplicitLockType(transaction) == LockType.SIX && (newLockType == LockType.IS || newLockType == LockType.IX)) {
             this.lockman.promote(transaction, name, newLockType);
@@ -206,7 +203,6 @@ public class LockContext {
      * @throws UnsupportedOperationException if context is readonly
      */
     public void escalate(TransactionContext transaction) throws NoLockHeldException {
-        // TODO(proj4_part2): implement
         this.checkReadOnly();
         LockType expect = this.getExplicitLockType(transaction);
         if (expect.isIntent()) {
@@ -236,7 +232,6 @@ public class LockContext {
      */
     public LockType getExplicitLockType(TransactionContext transaction) {
         if (transaction == null) return LockType.NL;
-        // TODO(proj4_part2): implement
         return lockman.getLockType(transaction, this.getResourceName());
     }
 
@@ -260,7 +255,6 @@ public class LockContext {
         }
         return explicit;
 
-        // TODO(proj4_part2): implement
     }
 
     /**
@@ -277,7 +271,6 @@ public class LockContext {
         else {
             return this.parent.hasSIXAncestor(transaction);
         }
-        // TODO(proj4_part2): implement
     }
 
     /**
@@ -288,7 +281,6 @@ public class LockContext {
      * holds an S or IS lock.
      */
     private List<ResourceName> sisDescendants(TransactionContext transaction) {
-        // TODO(proj4_part2): implement
         List<ResourceName> resourceNames = new ArrayList<>();
         for(LockContext ctx : children.values()) {
             LockType explicit = ctx.getExplicitLockType(transaction);

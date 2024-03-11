@@ -40,7 +40,6 @@ public class LockUtil {
         LockType effectiveLockType = lockContext.getEffectiveLockType(transaction);
         LockType explicitLockType = lockContext.getExplicitLockType(transaction);
 
-        // TODO(proj4_part2): implement
         if (LockType.substitutable(effectiveLockType, requestType)) {
             return;
         } else if (explicitLockType == LockType.IX && requestType == LockType.S) {
@@ -59,7 +58,6 @@ public class LockUtil {
         }
     }
 
-    // TODO(proj4_part2) add any helper methods you want
 
     public static void grantParentIntentLock(TransactionContext transaction, LockContext lockContext, LockType lockType) {
         if (lockContext.parent != null) {
