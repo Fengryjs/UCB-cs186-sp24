@@ -88,7 +88,7 @@ public enum LockType {
         boolean[][] matrix = new boolean[][]{
                 //  S      X      IS     IX     SIX    NL
                 {true , false, true , false, false, true}, // S
-                {true , true, false, false, false, true}, // X
+                {true , true, false, true, false, true}, // X
                 {false, false, true , false, false, true}, // IS
                 {false, false, true , true , false, true}, // IX
                 {true, false, true , true , true , true}, // SIX

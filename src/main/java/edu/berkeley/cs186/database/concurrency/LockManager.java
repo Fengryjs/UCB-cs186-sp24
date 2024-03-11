@@ -328,7 +328,7 @@ public class LockManager {
             if (toPromote.lockType == newLockType)
                 throw new DuplicateLockRequestException("[]");
             if (!LockType.substitutable(newLockType, toPromote.lockType))
-                throw new InvalidLockException("[promote]: Invalid Lock");
+                throw new InvalidLockException("[promote]: Invalid Lock toPromoteType " + toPromote + " newType " + newLockType);
             if (entry.checkCompatible(newLockType, transaction.getTransNum())) {
                 entry.grantOrUpdateLock(newLock);
             } else {
