@@ -31,7 +31,6 @@ public class LockUtil {
     public static void ensureSufficientLockHeld(LockContext lockContext, LockType requestType) {
         // requestType must be S, X, or NL
         assert (requestType == LockType.S || requestType == LockType.X || requestType == LockType.NL);
-
         // Do nothing if the transaction or lockContext is null
         TransactionContext transaction = TransactionContext.getTransaction();
         if (transaction == null || lockContext == null) return;
@@ -72,7 +71,10 @@ public class LockUtil {
         if (type == LockType.NL)
             lockContext.acquire(transaction, lockType);
         else {
-            lockContext.promote(transaction, lockType);
+            if(type.isIntent())
+                lockContext.promote(transaction, lockType);
+            else
+                lockContext.acquire(transaction, lockType);
         }
     }
 }

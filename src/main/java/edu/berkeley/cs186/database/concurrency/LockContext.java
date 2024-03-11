@@ -133,7 +133,6 @@ public class LockContext {
         if (this.parent != null) {
             this.parent.numChildLocks.put(transaction.getTransNum(), this.parent.numChildLocks.get(transaction.getTransNum()) - 1);
         }
-
         this.lockman.release(transaction, name);
         return;
     }
