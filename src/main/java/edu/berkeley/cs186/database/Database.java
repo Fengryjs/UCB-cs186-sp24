@@ -930,9 +930,11 @@ public class Database implements AutoCloseable {
         @Override
         public void close() {
             try {
-                List<Lock> locks = lockManager.getLocks(getTransaction());
-                for (int i = locks.size() - 1; i >= 0; i--) {
-                    lockManager.release(getTransaction(), locks.get(i).name);
+                if (!this.recoveryTransaction) {
+                    List<Lock> locks = lockManager.getLocks(getTransaction());
+                    for (int i = locks.size() - 1; i >= 0; i--) {
+                        lockManager.release(getTransaction(), locks.get(i).name);
+                    }
                 }
                 return;
             } catch (Exception e) {
